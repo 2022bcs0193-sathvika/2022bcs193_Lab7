@@ -68,8 +68,8 @@ pipeline {
 
                     echo "Valid Response: ${response}"
 
-                    if (!(response ==~ /.*\\d+.*/)) {
-                        error("Prediction is not numeric")
+                    if (!(response ==~ /.*"wine_quality"\\s*:\\s*\\d+.*/)) {
+                        error("wine_quality field missing or not numeric")
                     }
                 }
             }

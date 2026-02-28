@@ -33,7 +33,6 @@ pipeline {
                         sleep 5
 
                         waitUntil {
-
                             def status = bat(
                                 script: '''
                                 @echo off
@@ -56,7 +55,7 @@ pipeline {
             steps {
                 script {
 
-                    def response = bat(
+                    def rawOutput = bat(
                         script: '''
                         @echo off
                         curl -s -X POST http://localhost:8000/predict ^
@@ -66,11 +65,25 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    echo "Valid Response: ${response}"
+                    echo "Raw Output: ${rawOutput}"
 
-                    if (!response.contains('"wine_quality"')) {
+                    // Extract last non-empty line
+                    def lines = rawOutput.readLines().findAll { it.trim() != "" }
+                    def jsonLine = lines[-1].trim()
+
+                    echo "Extracted JSON: ${jsonLine}"
+
+                    def parsed = new groovy.json.JsonSlurper().parseText(jsonLine)
+
+                    if (!parsed.containsKey("wine_quality")) {
                         error("wine_quality field missing")
                     }
+
+                    if (!(parsed.wine_quality instanceof Number)) {
+                        error("wine_quality is not numeric")
+                    }
+
+                    echo "wine_quality validated: ${parsed.wine_quality}"
                 }
             }
         }
@@ -79,7 +92,7 @@ pipeline {
             steps {
                 script {
 
-                    def output = bat(
+                    def rawStatus = bat(
                         script: '''
                         @echo off
                         curl -s -o nul -w "%%{http_code}" -X POST http://localhost:8000/predict ^
@@ -89,11 +102,11 @@ pipeline {
                         returnStdout: true
                     ).trim()
 
-                    def code = output.takeRight(3)
+                    def statusCode = rawStatus.takeRight(3)
 
-                    echo "Invalid Input HTTP Code: ${code}"
+                    echo "Invalid request HTTP code: ${statusCode}"
 
-                    if (code != "422") {
+                    if (statusCode != "422") {
                         error("Invalid input did not return 422")
                     }
                 }

@@ -65,7 +65,7 @@ pipeline {
                     echo "Valid Response: ${response}"
 
                     // Loose numeric check (lab-safe)
-                    if (!(response ==~ /.*\\d+.*/)) {
+                    if (!(response ==~ /.*\d+.*/)) {
                         error("Prediction is not numeric")
                     }
                 }

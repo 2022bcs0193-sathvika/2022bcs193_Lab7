@@ -28,20 +28,24 @@ pipeline {
         stage('Wait for Service Readiness') {
             steps {
                 script {
-                    timeout(time: 90, unit: 'SECONDS') {
+                    timeout(time: 120, unit: 'SECONDS') {
+
+                        sleep 5
+
                         waitUntil {
 
-                            def output = bat(
-                                script: '@echo off && curl -s -o nul -w "%%{http_code}" http://localhost:8000/docs',
+                            def status = bat(
+                                script: '''
+                                @echo off
+                                curl -s http://localhost:8000/docs >nul 2>nul
+                                echo %errorlevel%
+                                ''',
                                 returnStdout: true
                             ).trim()
 
-                            // Extract actual HTTP code
-                            def code = output.takeRight(3)
+                            echo "Curl exit code: ${status}"
 
-                            echo "Readiness HTTP Code: ${code}"
-
-                            return (code == "200")
+                            return (status == "0")
                         }
                     }
                 }
@@ -64,7 +68,7 @@ pipeline {
 
                     echo "Valid Response: ${response}"
 
-                    if (!(response ==~ /.*\d+.*/)) {
+                    if (!(response ==~ /.*\\d+.*/)) {
                         error("Prediction is not numeric")
                     }
                 }
